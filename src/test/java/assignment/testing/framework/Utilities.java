@@ -49,6 +49,7 @@ public class Utilities
     ///# Section: Scoped values
     ///
     ///
+    /// TODO: class constructor scoping
     /// TODO: class instance scoping
     ///-----------------------------------------------------------------------------------------------------------------
     static private final ScopedValue<Class<?>> CLASS = ScopedValue.newInstance();
@@ -111,6 +112,16 @@ public class Utilities
 
     static public boolean classExists(String fullyQualifiedClassName) {
         return Utilities.findClass(fullyQualifiedClassName).isPresent();
+    }
+
+
+    static public boolean classIsInnerClass(Class<?> classObject) {
+        return classObject.isMemberClass();
+    }
+
+    /** Scoped CLASS */
+    static public boolean classIsInnerClass() {
+        return Utilities.classIsInnerClass(CLASS.get());
     }
 
 
@@ -280,6 +291,13 @@ public class Utilities
     static public void testMethod(Class<?> classObject, String methodName, List<Class<?>> parameterTypes, Runnable fn) {
         Utilities.findMethod(classObject, methodName, parameterTypes.toArray(new Class[0])).ifPresent(
             method -> Utilities.testMethod(method, fn)
+        );
+    }
+
+    /** Scoped CLASS */
+    static public void testMethod(String methodName, Runnable fn) {
+        Utilities.findMethod(CLASS.get(), methodName, new Class[0]).ifPresent(
+                method -> Utilities.testMethod(method, fn)
         );
     }
 
@@ -486,6 +504,11 @@ public class Utilities
         return (METHOD.get().getModifiers() & Modifier.FINAL) != 0;
     }
 
+    /** Scoped CLASS+METHOD */
+    static public boolean methodIsInherited() {
+        return (METHOD.get().getDeclaringClass() != CLASS.get());
+    }
+
 
     /** Scoped METHOD */
     static public boolean methodHasModifiers(AccessFlag... flags) {
@@ -503,6 +526,30 @@ public class Utilities
 
         return true;
     }
+
+
+    // Check if a method overrides an inherited method
+    static public boolean methodOverrides() {
+        return Utilities.methodOverrides(METHOD.get());
+    }
+
+    static public boolean methodOverrides(Method methodObject) {
+        var superClass = methodObject.getDeclaringClass().getSuperclass();
+
+        while (superClass != null) {
+            try {
+                if (!superClass.getMethod(methodObject.getName(), methodObject.getParameterTypes()).equals(methodObject)) {
+                    return true;
+                }
+            } catch (NoSuchMethodException e) {}
+
+            superClass = superClass.getSuperclass();
+        }
+
+        return false;
+    }
+
+
 
 
 
@@ -777,6 +824,22 @@ public class Utilities
     //## Assertions
     static public void assertStandardOutputEquals(String input) {
         assertEquals("\"%s\"".formatted(input), "\"%s\"".formatted(Utilities.getStandardOutput()));
+    }
+
+
+    static public void provideHintIfAssertionFails(String hint, Runnable fn) {
+        try {
+            fn.run();
+        } catch (AssertionFailedError e) {
+            Utilities.resetStandardOutput();
+
+            IO.println();
+            IO.println(hint);
+
+            Utilities.setStandardOutput();
+
+            throw e;
+        }
     }
 
 

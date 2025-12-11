@@ -97,6 +97,20 @@ testClassMethod("assignment.Person", "getName", () -> {
     
     assertTrue(methodReturns(String.class));
 });
+
+testClassMethod("assignment.Student", "toString", () -> {
+    testMethod("toString", () -> {
+        provideHintIfAssertionFails(
+            String.format(
+                "Currently Student#toString() is inherited from '%s', declare your own to override it",
+                getScopedMethod().getDeclaringClass().getName()
+            ),
+            () -> {
+                assertFalse(methodIsInherited());
+            }
+        );
+    });
+});
 ```
 
 
