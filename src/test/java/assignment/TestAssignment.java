@@ -29,7 +29,7 @@ public class TestAssignment extends BaseAssignment
         // Code that tests the assignment goes here
 
 
-        testClass("Hello", () -> {
+        testClass("assignment.Hello", () -> {
             var printOut = "Hello World!";
             var hello = classCreateInstance();
 
