@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: 2025 Marcus Alexander Dahl (programkode)
 // SPDX-License-Identifier: MPL-2.0
-package assignment.testing.framework;
+package studio.programkode.jatf.java25;
 
 import org.opentest4j.AssertionFailedError;
 
@@ -11,14 +11,29 @@ import static java.lang.ScopedValue.where;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.lang.ScopedValue;
-import java.lang.reflect.*;
+import java.lang.reflect.AccessFlag;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
 
-public class Utilities
+/**
+ * JATF - Java Assignment Testing Framework (Java 25)
+ *  A class that strictly contains static helper methods to test:
+ *  Classes, fields, methods, constructors (class instantiation) and general assertations.
+ *  <p>
+ *  Scoped testing is performed via `test*(...)`-methods,
+ *  and allows you to easily switch testing context by nesting such test-calls.
+ *
+ */
+public class Framework
 {
     ///-----------------------------------------------------------------------------------------------------------------
     ///# Section: Standard I/O
@@ -27,12 +42,23 @@ public class Utilities
     static private final ByteArrayOutputStream output = new ByteArrayOutputStream();
 
 
+    /**
+     * Returns the current standard system output as String-value.
+     * <p>
+     * Replaces all ASCII control characters (0x00-0x1F and 0x7F (0-31 and 127)) with empty String,
+     * while also keeping newlines and tabs.
+     *
+     * @return String
+     */
     static public String getStandardOutput() {
-        return Utilities.output.toString().replaceAll("\\p{Cntrl}", "");
+        return Framework.output.toString().replaceAll("[\\p{Cntrl}&&[^\\n\\r\\t]]", "");
     }
 
+    /**
+     * Sets the standard output to our local ByteArrayOutputStream used to capture stdout
+     */
     static public void setStandardOutput() {
-        Utilities.setStandardOutput(new PrintStream(Utilities.output));
+        Framework.setStandardOutput(new PrintStream(Framework.output));
     }
 
     static public void setStandardOutput(PrintStream stream) {
@@ -40,7 +66,7 @@ public class Utilities
     }
 
     static public void resetStandardOutput() {
-        System.setOut(Utilities.stdout);
+        System.setOut(Framework.stdout);
     }
 
 
@@ -74,7 +100,7 @@ public class Utilities
     ///# Section: Classes
     ///-----------------------------------------------------------------------------------------------------------------
     static public Optional<Class<?>> findClass(String pkg, String className) {
-        return Utilities.findClass(Utilities.FQCN(pkg, className));
+        return Framework.findClass(Framework.FQCN(pkg, className));
     }
 
     static public Optional<Class<?>> findClass(String fullyQualifiedClassName) {
@@ -87,31 +113,31 @@ public class Utilities
 
 
     static public void testClass(String pkg, String className, Runnable fn) {
-        Utilities.testClass(Utilities.FQCN(pkg, className), fn);
+        Framework.testClass(Framework.FQCN(pkg, className), fn);
     }
 
     static public void testClass(String fullyQualifiedClassName, Runnable fn) {
-        var classObject = Utilities.findClass(fullyQualifiedClassName);
+        var classObject = Framework.findClass(fullyQualifiedClassName);
 
         if (classObject.isEmpty()) {
-            Utilities.throwClassNotFound(fullyQualifiedClassName);
+            Framework.throwClassNotFound(fullyQualifiedClassName);
         }
         else {
-            Utilities.testClass(classObject.get(), fn);
+            Framework.testClass(classObject.get(), fn);
         }
     }
 
     static public void testClass(Class<?> classObject, Runnable fn) {
-        where(Utilities.CLASS, classObject).run(fn);
+        where(Framework.CLASS, classObject).run(fn);
     }
 
 
     static public boolean classExists(String pkg, String className) {
-        return Utilities.classExists(Utilities.FQCN(pkg, className));
+        return Framework.classExists(Framework.FQCN(pkg, className));
     }
 
     static public boolean classExists(String fullyQualifiedClassName) {
-        return Utilities.findClass(fullyQualifiedClassName).isPresent();
+        return Framework.findClass(fullyQualifiedClassName).isPresent();
     }
 
 
@@ -121,7 +147,7 @@ public class Utilities
 
     /** Scoped CLASS */
     static public boolean classIsInnerClass() {
-        return Utilities.classIsInnerClass(CLASS.get());
+        return Framework.classIsInnerClass(CLASS.get());
     }
 
 
@@ -143,7 +169,7 @@ public class Utilities
 
     /** Scoped CLASS */
     static public Object classCreateInstance(Object... parameterValues) {
-        return Utilities.classCreateInstance(CLASS.get(), parameterValues);
+        return Framework.classCreateInstance(CLASS.get(), parameterValues);
     }
 
     static public Object classCreateInstance(Class<?> classObject, Object... parameterValues) {
@@ -181,7 +207,6 @@ public class Utilities
     }
 
 
-
     ///-----------------------------------------------------------------------------------------------------------------
     ///# Section: Methods
     ///
@@ -192,24 +217,24 @@ public class Utilities
             String pkg, String className,
             String methodName, Class<?>... parameterTypes
     ) {
-        return Utilities.findMethod(Utilities.FQCN(pkg, className), methodName, parameterTypes);
+        return Framework.findMethod(Framework.FQCN(pkg, className), methodName, parameterTypes);
     }
 
     static public Optional<Method> findMethod(
             String fullyQualifiedClassName,
             String methodName, Class<?>... parameterTypes
     ) {
-        var classObject = Utilities.findClass(fullyQualifiedClassName);
+        var classObject = Framework.findClass(fullyQualifiedClassName);
 
         if (classObject.isPresent()) {
-            return Utilities.findMethod(classObject.get(), methodName, parameterTypes);
+            return Framework.findMethod(classObject.get(), methodName, parameterTypes);
         }
 
         return Optional.empty();
     }
 
     static public Optional<Method> findMethod(Class<?> classObject, String methodName, List<Class<?>> parameterTypes) {
-        return Utilities.findMethod(classObject, methodName, parameterTypes.toArray(new Class[0]));
+        return Framework.findMethod(classObject, methodName, parameterTypes.toArray(new Class[0]));
     }
 
     static public Optional<Method> findMethod(Class<?> classObject, String methodName, Class<?>... parameterTypes) {
@@ -228,17 +253,17 @@ public class Utilities
             String pkg, String className,
             String methodName, Class<?>... parameterTypes
     ) {
-        return Utilities.findDeclaredMethod(Utilities.FQCN(pkg, className), methodName, parameterTypes);
+        return Framework.findDeclaredMethod(Framework.FQCN(pkg, className), methodName, parameterTypes);
     }
 
     static public Optional<Method> findDeclaredMethod(
             String fullyQualifiedClassName,
             String methodName, Class<?>... parameterTypes
     ) {
-        var classObject = Utilities.findClass(fullyQualifiedClassName);
+        var classObject = Framework.findClass(fullyQualifiedClassName);
 
         if (classObject.isPresent()) {
-            return Utilities.findDeclaredMethod(classObject.get(), methodName, parameterTypes);
+            return Framework.findDeclaredMethod(classObject.get(), methodName, parameterTypes);
         }
 
         return Optional.empty();
@@ -248,7 +273,7 @@ public class Utilities
             Class<?> classObject,
             String methodName, List<Class<?>> parameterTypes
     ) {
-        return Utilities.findDeclaredMethod(classObject, methodName, parameterTypes.toArray(new Class[0]));
+        return Framework.findDeclaredMethod(classObject, methodName, parameterTypes.toArray(new Class[0]));
     }
 
     static public Optional<Method> findDeclaredMethod(
@@ -271,7 +296,7 @@ public class Utilities
             String methodName, List<Class<?>> parameterTypes,
             Runnable fn
     ) {
-        Utilities.testMethod(FQCN(pkg, className), methodName, parameterTypes, fn);
+        Framework.testMethod(FQCN(pkg, className), methodName, parameterTypes, fn);
     }
 
     static public void testMethod(
@@ -282,34 +307,34 @@ public class Utilities
         var classObject = findClass(fullyQualifiedClassName);
 
         if (classObject.isEmpty()) {
-            Utilities.throwClassNotFound(fullyQualifiedClassName);
+            Framework.throwClassNotFound(fullyQualifiedClassName);
         }
 
-        Utilities.testMethod(classObject.get(), methodName, parameterTypes, fn);
+        Framework.testMethod(classObject.get(), methodName, parameterTypes, fn);
     }
 
     static public void testMethod(Class<?> classObject, String methodName, List<Class<?>> parameterTypes, Runnable fn) {
-        Utilities.findMethod(classObject, methodName, parameterTypes.toArray(new Class[0])).ifPresent(
-            method -> Utilities.testMethod(method, fn)
+        Framework.findMethod(classObject, methodName, parameterTypes.toArray(new Class[0])).ifPresent(
+            method -> Framework.testMethod(method, fn)
         );
     }
 
     /** Scoped CLASS */
     static public void testMethod(String methodName, Runnable fn) {
-        Utilities.findMethod(CLASS.get(), methodName, new Class[0]).ifPresent(
-                method -> Utilities.testMethod(method, fn)
+        Framework.findMethod(CLASS.get(), methodName, new Class[0]).ifPresent(
+                method -> Framework.testMethod(method, fn)
         );
     }
 
     /** Scoped CLASS */
     static public void testMethod(String methodName, List<Class<?>> parameterTypes, Runnable fn) {
-        Utilities.findMethod(CLASS.get(), methodName, parameterTypes.toArray(new Class[0])).ifPresent(
-            method -> Utilities.testMethod(method, fn)
+        Framework.findMethod(CLASS.get(), methodName, parameterTypes.toArray(new Class[0])).ifPresent(
+            method -> Framework.testMethod(method, fn)
         );
     }
 
     static public void testMethod(Method methodObject, Runnable fn) {
-        where(Utilities.METHOD, methodObject).run(fn);
+        where(Framework.METHOD, methodObject).run(fn);
     }
 
 
@@ -318,7 +343,7 @@ public class Utilities
             String methodName, List<Class<?>> parameterTypes,
             Runnable fn
     ) {
-        Utilities.testDeclaredMethod(FQCN(pkg, className), methodName, parameterTypes, fn);
+        Framework.testDeclaredMethod(FQCN(pkg, className), methodName, parameterTypes, fn);
     }
 
     static public void testDeclaredMethod(
@@ -329,10 +354,10 @@ public class Utilities
         var classObject = findClass(fullyQualifiedClassName);
 
         if (classObject.isEmpty()) {
-            Utilities.throwClassNotFound(fullyQualifiedClassName);
+            Framework.throwClassNotFound(fullyQualifiedClassName);
         }
 
-        Utilities.testDeclaredMethod(classObject.get(), methodName, parameterTypes, fn);
+        Framework.testDeclaredMethod(classObject.get(), methodName, parameterTypes, fn);
     }
 
     static public void testDeclaredMethod(
@@ -341,19 +366,19 @@ public class Utilities
             Runnable fn
     ) {
         var parameterTypes = parameters.toArray(new Class[0]);
-        var methodObject = Utilities.findMethod(classObject, methodName, parameterTypes);
+        var methodObject = Framework.findMethod(classObject, methodName, parameterTypes);
 
         if (methodObject.isEmpty()) {
-            Utilities.throwClassMethodNotFound(classObject.getName(), methodName, parameterTypes);
+            Framework.throwClassMethodNotFound(classObject.getName(), methodName, parameterTypes);
         }
 
-        Utilities.testMethod(methodObject.get(), fn);
+        Framework.testMethod(methodObject.get(), fn);
     }
 
     /** Scoped CLASS */
     static public void testDeclaredMethod(String methodName, List<Class<?>> parameterTypes, Runnable fn) {
-        Utilities.findDeclaredMethod(CLASS.get(), methodName, parameterTypes.toArray(new Class[0])).ifPresent(
-            method -> Utilities.testMethod(method, fn)
+        Framework.findDeclaredMethod(CLASS.get(), methodName, parameterTypes.toArray(new Class[0])).ifPresent(
+            method -> Framework.testMethod(method, fn)
         );
     }
 
@@ -363,7 +388,7 @@ public class Utilities
             String methodName,
             Runnable fn
     ) {
-        Utilities.testClassMethod(pkg, className, methodName, List.of(), fn);
+        Framework.testClassMethod(pkg, className, methodName, List.of(), fn);
     }
 
     static public void testClassMethod(
@@ -371,7 +396,7 @@ public class Utilities
             String methodName, List<Class<?>> parameterTypes,
             Runnable fn
     ) {
-        Utilities.testClassMethod(Utilities.FQCN(pkg, className), methodName, parameterTypes, fn);
+        Framework.testClassMethod(Framework.FQCN(pkg, className), methodName, parameterTypes, fn);
     }
 
     static public void testClassMethod(
@@ -379,35 +404,35 @@ public class Utilities
             String methodName, List<Class<?>> parameters,
             Runnable fn
     ) {
-        var classOptional = Utilities.findClass(fullyQualifiedClassName);
+        var classOptional = Framework.findClass(fullyQualifiedClassName);
 
         if (classOptional.isEmpty()) {
-            Utilities.throwClassNotFound(fullyQualifiedClassName);
+            Framework.throwClassNotFound(fullyQualifiedClassName);
         }
 
-        where(Utilities.CLASS, classOptional.get()).run(() -> {
+        where(Framework.CLASS, classOptional.get()).run(() -> {
             var parameterTypes = parameters.toArray(new Class[0]);
-            var methodOptional = Utilities.findMethod(CLASS.get(), methodName, parameterTypes);
+            var methodOptional = Framework.findMethod(CLASS.get(), methodName, parameterTypes);
 
             if (methodOptional.isEmpty()) {
-                Utilities.throwClassMethodNotFound(fullyQualifiedClassName, methodName, parameterTypes);
+                Framework.throwClassMethodNotFound(fullyQualifiedClassName, methodName, parameterTypes);
             }
 
-            where(Utilities.METHOD, methodOptional.get()).run(fn);
+            where(Framework.METHOD, methodOptional.get()).run(fn);
         });
     }
 
 
     static public boolean methodExists(String pkg, String className, String methodName, Class<?>... parameterTypes) {
-        return Utilities.methodExists(Utilities.FQCN(pkg, className), methodName, parameterTypes);
+        return Framework.methodExists(Framework.FQCN(pkg, className), methodName, parameterTypes);
     }
 
     static public boolean methodExists(String fullyQualifiedClassName, String methodName, Class<?>... parameterTypes) {
-        return Utilities.findMethod(fullyQualifiedClassName, methodName, parameterTypes).isPresent();
+        return Framework.findMethod(fullyQualifiedClassName, methodName, parameterTypes).isPresent();
     }
 
     static public boolean methodExists(Class<?> classObject, String methodName, Class<?>... parameterTypes) {
-        return Utilities.findMethod(classObject, methodName, parameterTypes).isPresent();
+        return Framework.findMethod(classObject, methodName, parameterTypes).isPresent();
     }
 
     /** Scoped CLASS */
@@ -417,15 +442,15 @@ public class Utilities
 
 
     static public boolean methodExistsDeclared(String pkg, String className, String methodName, Class<?>... parameterTypes) {
-        return Utilities.methodExistsDeclared(Utilities.FQCN(pkg, className), methodName, parameterTypes);
+        return Framework.methodExistsDeclared(Framework.FQCN(pkg, className), methodName, parameterTypes);
     }
 
     static public boolean methodExistsDeclared(String fullyQualifiedClassName, String methodName, Class<?>... parameterTypes) {
-        return Utilities.findDeclaredMethod(fullyQualifiedClassName, methodName, parameterTypes).isPresent();
+        return Framework.findDeclaredMethod(fullyQualifiedClassName, methodName, parameterTypes).isPresent();
     }
 
     static public boolean methodExistsDeclared(Class<?> classObject, String methodName, Class<?>... parameterTypes) {
-        return Utilities.findDeclaredMethod(classObject, methodName, parameterTypes).isPresent();
+        return Framework.findDeclaredMethod(classObject, methodName, parameterTypes).isPresent();
     }
 
     /** Scoped CLASS */
@@ -440,7 +465,7 @@ public class Utilities
             List<Class<?>> parameterTypes,
             Class<?> returnType
     ) {
-        var methodObject = Utilities.findMethod(fullyQualifiedClassName, methodName, parameterTypes.toArray(new Class[0]));
+        var methodObject = Framework.findMethod(fullyQualifiedClassName, methodName, parameterTypes.toArray(new Class[0]));
 
         return methodObject.map(method -> method.getReturnType().equals(returnType)).orElse(false);
     }
@@ -451,7 +476,7 @@ public class Utilities
 
     /** Scoped CLASS+METHOD */
     static public boolean methodReturns(Class<?> returnType) {
-        return Utilities.methodReturns(METHOD.get(), returnType);
+        return Framework.methodReturns(METHOD.get(), returnType);
     }
 
 
@@ -459,36 +484,36 @@ public class Utilities
             String pkg, String className,
             String methodName, Class<?>... parameterTypes
     ) {
-        return Utilities.methodReturnType(FQCN(pkg, className), methodName, parameterTypes);
+        return Framework.methodReturnType(FQCN(pkg, className), methodName, parameterTypes);
     }
 
     static public String methodReturnType(
             String fullyQualifiedClassName,
             String methodName, Class<?>... parameterTypes
     ) {
-        var classObject = Utilities.findClass(fullyQualifiedClassName);
+        var classObject = Framework.findClass(fullyQualifiedClassName);
 
         if (classObject.isEmpty()) {
-            Utilities.throwClassNotFound(fullyQualifiedClassName);
+            Framework.throwClassNotFound(fullyQualifiedClassName);
         }
 
-        return Utilities.methodReturnType(classObject.get(), methodName, parameterTypes);
+        return Framework.methodReturnType(classObject.get(), methodName, parameterTypes);
     }
 
     static public String methodReturnType(
             Class<?> classObject, String methodName, Class<?>... parameterTypes
     ) {
-        var methodObject = Utilities.findMethod(classObject, methodName, parameterTypes);
+        var methodObject = Framework.findMethod(classObject, methodName, parameterTypes);
 
         if (methodObject.isEmpty()) {
-            Utilities.throwClassMethodNotFound(classObject.getName(), methodName, parameterTypes);
+            Framework.throwClassMethodNotFound(classObject.getName(), methodName, parameterTypes);
         }
 
-        return Utilities.methodReturnType(methodObject.get());
+        return Framework.methodReturnType(methodObject.get());
     }
 
     static public String methodReturnType(Method methodObject) {
-        return Utilities.getTypeName(methodObject.getGenericReturnType());
+        return Framework.getTypeName(methodObject.getGenericReturnType());
     }
 
 
@@ -530,7 +555,7 @@ public class Utilities
 
     /** Scoped METHOD */
     static public boolean methodHasModifiers(AccessFlag... flags) {
-        return Utilities.methodHasModifiers(METHOD.get(), flags);
+        return Framework.methodHasModifiers(METHOD.get(), flags);
     }
 
     static public boolean methodHasModifiers(Method methodObject, AccessFlag... flags) {
@@ -548,7 +573,7 @@ public class Utilities
 
     // Check if a method overrides an inherited method
     static public boolean methodOverrides() {
-        return Utilities.methodOverrides(METHOD.get());
+        return Framework.methodOverrides(METHOD.get());
     }
 
     static public boolean methodOverrides(Method methodObject) {
@@ -568,6 +593,31 @@ public class Utilities
     }
 
 
+    static public boolean mainMethodExists(String pkg, String className) {
+        return Framework.mainMethodExists(Framework.FQCN(pkg, className));
+    }
+
+    static public boolean mainMethodExists(String fullyQualifiedClassName) {
+        var classObject = findClass(fullyQualifiedClassName);
+
+        return classObject.filter(Framework::mainMethodExists).isPresent();
+
+    }
+
+    static public boolean mainMethodExists(Class<?> classObject) {
+        for (var method : classObject.getDeclaredMethods()) {
+            if (method.getName().equals("main")) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /** SCOPED CLASS */
+    static public boolean mainMethodExists() {
+        return Framework.mainMethodExists(CLASS.get());
+    }
 
 
 
@@ -578,14 +628,14 @@ public class Utilities
     /// TODO: support FQCN#fieldName syntax as field specifier
     ///-----------------------------------------------------------------------------------------------------------------
     static public Optional<Field> findField(String pkg, String className, String fieldName) {
-        return Utilities.findField(FQCN(pkg, className), fieldName);
+        return Framework.findField(FQCN(pkg, className), fieldName);
     }
 
     static public Optional<Field> findField(String fullyQualifiedClassName, String fieldName) {
-        var classObject = Utilities.findClass(fullyQualifiedClassName);
+        var classObject = Framework.findClass(fullyQualifiedClassName);
 
         if (classObject.isPresent()) {
-            return Utilities.findField(classObject.get(), fieldName);
+            return Framework.findField(classObject.get(), fieldName);
         }
 
         return Optional.empty();
@@ -601,14 +651,14 @@ public class Utilities
 
 
     static public Optional<Field> findDeclaredField(String pkg, String className, String fieldName) {
-        return Utilities.findDeclaredField(FQCN(pkg, className), fieldName);
+        return Framework.findDeclaredField(FQCN(pkg, className), fieldName);
     }
 
     static public Optional<Field> findDeclaredField(String fullyQualifiedClassName, String fieldName) {
-        var classObject = Utilities.findClass(fullyQualifiedClassName);
+        var classObject = Framework.findClass(fullyQualifiedClassName);
 
         if (classObject.isPresent()) {
-            return Utilities.findDeclaredField(classObject.get(), fieldName);
+            return Framework.findDeclaredField(classObject.get(), fieldName);
         }
 
         return Optional.empty();
@@ -622,6 +672,20 @@ public class Utilities
         }
     }
 
+    static public Optional<Field> findAnyField(Class<?> classObject, String fieldName) {
+        var field = Framework.findDeclaredField(classObject, fieldName);
+
+        if (field.isEmpty()) {
+            field = Framework.findField(classObject, fieldName);
+
+            if (field.isEmpty()) {
+                return Optional.empty();
+            }
+        }
+
+        return field;
+    }
+
 
     static public void testField(
             String pkg,
@@ -629,7 +693,7 @@ public class Utilities
             String fieldName,
             Runnable fn
     ) {
-        Utilities.testField(FQCN(pkg, className), fieldName, fn);
+        Framework.testField(FQCN(pkg, className), fieldName, fn);
     }
 
     static public void testField(
@@ -637,101 +701,71 @@ public class Utilities
             String fieldName,
             Runnable fn
     ) {
-        Utilities.findClass(fullyQualifiedClassName).ifPresent(classObject -> {
-            Utilities.testField(classObject, fieldName, fn);
+        Framework.findClass(fullyQualifiedClassName).ifPresent(classObject -> {
+            Framework.testField(classObject, fieldName, fn);
         });
     }
 
     static public void testField(String fieldName, Runnable fn) {
-        Utilities.testField(CLASS.get(), fieldName, fn);
+        Framework.testField(CLASS.get(), fieldName, fn);
     }
 
     static public void testField(Class<?> classObject, String fieldName, Runnable fn) {
-        Utilities.findField(classObject, fieldName).ifPresent(field -> Utilities.testField(field, fn));
+        Framework.findAnyField(classObject, fieldName).ifPresent(field -> Framework.testField(field, fn));
     }
 
     static public void testField(Field fieldObject, Runnable fn) {
-        where(Utilities.FIELD, fieldObject).run(fn);
-    }
-
-
-    static public void testDeclaredField(String pkg, String className, String fieldName, Runnable fn) {
-        Utilities.testDeclaredField(FQCN(pkg, className), fieldName, fn);
-    }
-
-    static public void testDeclaredField(String fullyQualifiedClassName, String fieldName, Runnable fn) {
-        var classObject = Utilities.findClass(fullyQualifiedClassName);
-
-        if (classObject.isEmpty()) {
-            Utilities.throwClassNotFound(fullyQualifiedClassName);
-        }
-
-        Utilities.testDeclaredField(classObject.get(), fieldName, fn);
-    }
-
-    /** Scoped CLASS */
-    static public void testDeclaredField(String fieldName, Runnable fn) {
-        Utilities.testDeclaredField(CLASS.get(), fieldName, fn);
-    }
-
-    static public void testDeclaredField(Class<?> classObject, String fieldName, Runnable fn) {
-        var fieldObject = findField(classObject, fieldName);
-
-        if (fieldObject.isEmpty()) {
-            Utilities.throwClassFieldNotFound(classObject.getName(), fieldName);
-        }
-
-        Utilities.testField(fieldObject.get(), fn);
+        where(Framework.FIELD, fieldObject).run(fn);
     }
 
 
     static public void testClassField(String pkg, String className, String fieldName, Runnable fn) {
-        Utilities.testClassField(FQCN(pkg, className), fieldName, fn);
+        Framework.testClassField(FQCN(pkg, className), fieldName, fn);
     }
 
     static public void testClassField(String fullyQualifiedClassName, String fieldName, Runnable fn) {
-        var classObject = Utilities.findClass(fullyQualifiedClassName);
+        var classObject = Framework.findClass(fullyQualifiedClassName);
 
         if (classObject.isEmpty()) {
-            Utilities.throwClassNotFound(fullyQualifiedClassName);
+            Framework.throwClassNotFound(fullyQualifiedClassName);
         }
 
-        where(Utilities.CLASS, classObject.get()).run(() -> {
-            var fieldObject = Utilities.findField(CLASS.get(), fieldName);
+        where(Framework.CLASS, classObject.get()).run(() -> {
+            var fieldObject = Framework.findField(CLASS.get(), fieldName);
 
             if (fieldObject.isEmpty()) {
-                Utilities.throwClassFieldNotFound(fullyQualifiedClassName, fieldName);
+                Framework.throwClassFieldNotFound(fullyQualifiedClassName, fieldName);
             }
 
-            where(Utilities.FIELD, fieldObject.get()).run(fn);
+            where(Framework.FIELD, fieldObject.get()).run(fn);
         });
     }
 
 
     static public boolean fieldExists(String pkg, String className, String fieldName) {
-        return Utilities.fieldExists(FQCN(pkg, className), fieldName);
+        return Framework.fieldExists(FQCN(pkg, className), fieldName);
     }
 
     static public boolean fieldExists(String fullyQualifiedClassName, String fieldName) {
-        return Utilities.findField(fullyQualifiedClassName, fieldName).isPresent();
+        return Framework.findField(fullyQualifiedClassName, fieldName).isPresent();
     }
 
     /** Scoped CLASS */
     static public boolean fieldExists(String fieldName) {
-        return Utilities.findField(CLASS.get(), fieldName).isPresent();
+        return Framework.findAnyField(CLASS.get(), fieldName).isPresent();
     }
 
     static public boolean fieldExistsDeclared(String pkg, String className, String fieldName) {
-        return Utilities.fieldExistsDeclared(FQCN(pkg, className), fieldName);
+        return Framework.fieldExistsDeclared(FQCN(pkg, className), fieldName);
     }
 
     static public boolean fieldExistsDeclared(String fullyQualifiedClassName, String fieldName) {
-        return Utilities.findDeclaredField(fullyQualifiedClassName, fieldName).isPresent();
+        return Framework.findDeclaredField(fullyQualifiedClassName, fieldName).isPresent();
     }
 
     /** Scoped CLASS */
     static public boolean fieldExistsDeclared(String fieldName) {
-        return Utilities.findDeclaredField(CLASS.get(), fieldName).isPresent();
+        return Framework.findDeclaredField(CLASS.get(), fieldName).isPresent();
     }
 
     /** Scoped FIELD */
@@ -762,7 +796,7 @@ public class Utilities
 
     /** Scoped FIELD */
     static public boolean fieldHasModifiers(AccessFlag... flags) {
-        return Utilities.fieldHasModifiers(FIELD.get(), flags);
+        return Framework.fieldHasModifiers(FIELD.get(), flags);
     }
 
     static public boolean fieldHasModifiers(Field fieldObject, AccessFlag... flags) {
@@ -780,21 +814,21 @@ public class Utilities
 
     /** Scoped FÌELD */
     static public String fieldType() {
-        return Utilities.fieldType(FIELD.get().getGenericType());
+        return Framework.fieldType(FIELD.get().getGenericType());
     }
 
     static public String fieldType(Type type) {
         if (type instanceof ParameterizedType parameterizedType) {
-            return Utilities.fieldParameterizedType(parameterizedType);
+            return Framework.fieldParameterizedType(parameterizedType);
         }
         else {
-            return Utilities.stripPackageFromClassName(type.getTypeName());
+            return Framework.stripPackageFromClassName(type.getTypeName());
         }
     }
 
 
     static public String fieldParameterizedType(ParameterizedType type) {
-        return Utilities.getParameterizedTypeName(type);
+        return Framework.getParameterizedTypeName(type);
     }
 
 
@@ -804,12 +838,13 @@ public class Utilities
     ///-----------------------------------------------------------------------------------------------------------------
     static public String getTypeName(Type type) {
         if (type instanceof ParameterizedType parameterizedType) {
-            return Utilities.getParameterizedTypeName(parameterizedType);
+            return Framework.getParameterizedTypeName(parameterizedType);
         }
         else {
-            return Utilities.stripPackageFromClassName(type.getTypeName());
+            return Framework.stripPackageFromClassName(type.getTypeName());
         }
     }
+
 
     static public String getParameterizedTypeName(ParameterizedType type) {
         StringBuilder output = new StringBuilder();
@@ -823,13 +858,13 @@ public class Utilities
 
         for (var typeArgument : typeArguments) {
             if (typeArgument instanceof Class) {
-                types.add(Utilities.stripPackageFromClassName(((Class<?>) typeArgument).getName()));
+                types.add(Framework.stripPackageFromClassName(((Class<?>) typeArgument).getName()));
             }
             else if (typeArgument instanceof ParameterizedType parameterizedType) {
-                types.add(Utilities.getParameterizedTypeName(parameterizedType));
+                types.add(Framework.getParameterizedTypeName(parameterizedType));
             }
             else {
-                types.add(Utilities.stripPackageFromClassName(typeArgument.toString()));
+                types.add(Framework.stripPackageFromClassName(typeArgument.toString()));
             }
         }
 
@@ -853,7 +888,7 @@ public class Utilities
 
     //## Assertions
     static public void assertStandardOutputEquals(String input) {
-        assertEquals("\"%s\"".formatted(input), "\"%s\"".formatted(Utilities.getStandardOutput()));
+        assertEquals("\"%s\"".formatted(input), "\"%s\"".formatted(Framework.getStandardOutput()));
     }
 
 
@@ -863,7 +898,7 @@ public class Utilities
         try {
             fn.run();
         } catch (AssertionFailedError e) {
-            Utilities.resetStandardOutput();
+            Framework.resetStandardOutput();
 
             IO.println();
 
@@ -883,7 +918,7 @@ public class Utilities
                 }
             }
 
-            Utilities.setStandardOutput();
+            Framework.setStandardOutput();
 
             throw e;
         }
@@ -927,5 +962,5 @@ public class Utilities
 
     ///-----------------------------------------------------------------------------------------------------------------
     ///# Note: Private constructor; prevent instantiation of this class as it strictly contains static helper methods
-    private Utilities() {}
+    private Framework() {}
 }

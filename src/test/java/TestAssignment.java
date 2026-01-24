@@ -1,18 +1,10 @@
-package assignment;
-
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.junitpioneer.jupiter.DisableIfTestFails;
-import assignment.testing.framework.BaseAssignment;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static assignment.testing.framework.Utilities.*;
-
-import java.lang.reflect.AccessFlag;
-import java.util.List;
+import studio.programkode.jatf.java25.BaseAssignment;
 
 
 @DisableIfTestFails
