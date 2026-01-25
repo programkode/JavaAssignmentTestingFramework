@@ -1,4 +1,4 @@
-# Java Assignment Testing Frame
+# Java Assignment Testing Framework
 
 The goal of this testing framework is to make it easier to write automated tests for checking course work where Java 25 is used.
 
@@ -12,11 +12,27 @@ The goal of this testing framework is to make it easier to write automated tests
 
 ---
 
+# How to import via `pom.xml`:
+
+```
+...
+    <dependency>
+        <groupId>studio.programkode</groupId>
+        <artifactId>jatf-java25</artifactId>
+        <version>1.0.0</version>
+        <classifier>tests</classifier>
+        <scope>test</scope>
+    </dependency>
+...
+```
+
 # How to use:
 
 > Meant to be used within IntelliJ IDEA, recommended version: 2025.3
 > 
 > Tests can also be run via `mvn test` (For use with GitHub Actions)
+> 
+> Specific tests can be run via `mvn -Dtest=`
 
 ## `src/main/java/assignment/`
 
@@ -62,6 +78,14 @@ jobs:
 ```
 
 ---
+
+## To make use of this framework after installation:
+
+```java
+import static studio.programkode.jatf.java25.Framework.*;
+
+// and then use the available methods in your JUnit 6 tests
+```
 
 ## Examples: Testing assignment code
 

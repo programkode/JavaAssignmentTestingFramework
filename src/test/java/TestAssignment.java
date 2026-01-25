@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.junitpioneer.jupiter.DisableIfTestFails;
 import studio.programkode.jatf.java25.BaseAssignment;
+import static studio.programkode.jatf.java25.Framework.*;
 
 
 @DisableIfTestFails

@@ -7,6 +7,33 @@
     <groupId>studio.programkode</groupId>
     <artifactId>jatf-java25</artifactId>
     <version>1.0.0</version>
+    <packaging>jar</packaging>
+
+    <name>Java (25) Assignment Testing Framework</name>
+    <description>Made to test course work written using java 25. Uses ScopedValue for a richer declarative writing of tests. Meant to be used as a test-scoped library together with JUnit 6.</description>
+    <url>https://programkode.studio/javadoc/jatf</url>
+
+    <licenses>
+        <license>
+            <name>Mozilla Public License 2.0</name>
+            <url>https://spdx.org/licenses/MPL-2.0.html</url>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <name>Marcus Alexander Dahl</name>
+            <email>marcus@programkode.studio</email>
+            <organization>programkode studio</organization>
+            <organizationUrl>https://programkode.studio</organizationUrl>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>scm:git:git://github.com/programkode/JavaAssignmentTestingFramework.git</connection>
+        <developerConnection>scm:git:ssh://github.com:programkode/JavaAssignmentTestingFramework.git</developerConnection>
+        <url>https://github.com/programkode/JavaAssignmentTestingFramework/tree/main</url>
+    </scm>
 
     <properties>
         <maven.compiler.source>25</maven.compiler.source>
@@ -40,6 +67,39 @@
                     <execution>
                         <goals>
                             <goal>test-jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>3.12.0</version>
+                <configuration>
+                    <sourceFileIncludes>
+                        <include>Framework.java</include>
+                        <include>Utilities.java</include>
+                    </sourceFileIncludes>
+                    <sourcepath>${basedir}/src/test/studio/programkode/jatf/java25</sourcepath>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>attach-javadocs</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>3.4.0</version>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals>
+                            <goal>jar-no-fork</goal>
                         </goals>
                     </execution>
                 </executions>
