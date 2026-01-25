@@ -173,7 +173,7 @@ public class Framework
     }
 
     static public Object classCreateInstance(Class<?> classObject, Object... parameterValues) {
-        var signature = Arrays.stream(parameterValues).map(Object::getClass).toArray(Class<?>[]::new);
+        var signature = Framework.parameterSignature(parameterValues);
 
         try {
             var constructor = signature.length == 0
@@ -191,19 +191,19 @@ public class Framework
 
     /** Scoped CLASS */
     static public void classInstanceInvokeMethod(Object instance, String methodName, Object... parameterValues) {
-        var signature = Arrays.stream(parameterValues).map(Object::getClass).toArray(Class<?>[]::new);
+        var signature = Framework.parameterSignature(parameterValues);
 
-        try {
-            var method = parameterValues.length == 0
-                ? CLASS.get().getMethod(methodName)
-                : CLASS.get().getMethod(methodName, signature)
-            ;
-
-            method.invoke(instance, parameterValues);
-        } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
-            // TODO: better feedback per exception
-            throw new RuntimeException(e);
-        }
+        (parameterValues.length == 0
+            ? findMethod(CLASS.get(), methodName)
+            : findMethod(CLASS.get(), methodName, signature)
+        ).ifPresent(methodObject -> {
+            try {
+                methodObject.invoke(instance, parameterValues);
+            } catch (InvocationTargetException | IllegalAccessException e) {
+                // TODO: better feedback per exception
+                throw new RuntimeException(e);
+            }
+        });
     }
 
 
@@ -213,31 +213,87 @@ public class Framework
     ///
     /// TODO: support FQCN#methodName(...) syntax as method specifier
     ///-----------------------------------------------------------------------------------------------------------------
-    static public Optional<Method> findMethod(
-            String pkg, String className,
-            String methodName, Class<?>... parameterTypes
-    ) {
-        return Framework.findMethod(Framework.FQCN(pkg, className), methodName, parameterTypes);
+    static public Optional<Method> findMethod(String pkg, String className, String methodName) {
+        return Framework.findMethod(Framework.FQCN(pkg, className), methodName);
+    }
+
+    static public Optional<Method> findMethod(String fullyQualifiedClassName, String methodName) {
+        return Framework
+            .findClass(fullyQualifiedClassName)
+            .flatMap(classObject -> Framework.findMethod(classObject, methodName))
+        ;
+    }
+
+    static public Optional<Method> findMethod(Class<?> classObject, String methodName) {
+        return Framework.findDeclaredMethod(classObject, methodName).or(
+            () -> Framework.findPublicMethod(classObject, methodName)
+        );
     }
 
     static public Optional<Method> findMethod(
             String fullyQualifiedClassName,
-            String methodName, Class<?>... parameterTypes
+            String methodName,
+            Class<?>... parameterTypes
     ) {
-        var classObject = Framework.findClass(fullyQualifiedClassName);
+        return parameterTypes.length == 0
+            ?   Framework.findMethod(fullyQualifiedClassName, methodName)
+            :   Framework.findClass(fullyQualifiedClassName).flatMap(
+                    classObject -> Framework.findMethod(classObject, methodName, parameterTypes)
+                )
+        ;
+    }
 
-        if (classObject.isPresent()) {
-            return Framework.findMethod(classObject.get(), methodName, parameterTypes);
+    static public Optional<Method> findMethod(
+            Class<?> classObject,
+            String methodName,
+            List<Class<?>> parameterTypes
+    ) {
+        return Framework.findMethod(classObject, methodName, parameterTypes.toArray(new Class<?>[0]));
+    }
+
+    static public Optional<Method> findMethod(
+            Class<?> classObject,
+            String methodName,
+            Class<?>... parameterTypes
+    ) {
+        Optional<Method> method;
+
+        if (parameterTypes.length == 0)
+            method = Framework.findDeclaredMethod(classObject, methodName);
+        else
+            method = Framework.findDeclaredMethod(classObject, methodName, parameterTypes);
+
+        if (method.isEmpty()) {
+            if (parameterTypes.length == 0)
+                method = Framework.findPublicMethod(classObject, methodName);
+            else
+                method = Framework.findPublicMethod(classObject, methodName, parameterTypes);
         }
 
-        return Optional.empty();
+        return method;
     }
 
-    static public Optional<Method> findMethod(Class<?> classObject, String methodName, List<Class<?>> parameterTypes) {
-        return Framework.findMethod(classObject, methodName, parameterTypes.toArray(new Class[0]));
+    static public Optional<Method> findPublicMethod(
+            String pkg, String className,
+            String methodName, Class<?>... parameterTypes
+    ) {
+        return Framework.findPublicMethod(Framework.FQCN(pkg, className), methodName, parameterTypes);
     }
 
-    static public Optional<Method> findMethod(Class<?> classObject, String methodName, Class<?>... parameterTypes) {
+    static public Optional<Method> findPublicMethod(
+            String fullyQualifiedClassName,
+            String methodName, Class<?>... parameterTypes
+    ) {
+        return Framework.findClass(fullyQualifiedClassName).flatMap(
+                classObject -> Framework.findPublicMethod(classObject, methodName, parameterTypes)
+        );
+    }
+
+    static public Optional<Method> findPublicMethod(Class<?> classObject, String methodName, List<Class<?>> parameterTypes) {
+        return Framework.findPublicMethod(classObject, methodName, parameterTypes.toArray(new Class[0]));
+    }
+
+    static public Optional<Method> findPublicMethod(Class<?> classObject, String methodName, Class<?>... parameterTypes) {
         try {
             return parameterTypes.length == 0
                 ? Optional.of(classObject.getMethod(methodName))
@@ -260,13 +316,10 @@ public class Framework
             String fullyQualifiedClassName,
             String methodName, Class<?>... parameterTypes
     ) {
-        var classObject = Framework.findClass(fullyQualifiedClassName);
-
-        if (classObject.isPresent()) {
-            return Framework.findDeclaredMethod(classObject.get(), methodName, parameterTypes);
-        }
-
-        return Optional.empty();
+        return Framework
+            .findClass(fullyQualifiedClassName)
+            .flatMap(classObj -> Framework.findDeclaredMethod(classObj, methodName, parameterTypes))
+            ;
     }
 
     static public Optional<Method> findDeclaredMethod(
@@ -321,7 +374,7 @@ public class Framework
 
     /** Scoped CLASS */
     static public void testMethod(String methodName, Runnable fn) {
-        Framework.findMethod(CLASS.get(), methodName, new Class[0]).ifPresent(
+        Framework.findMethod(CLASS.get(), methodName).ifPresent(
                 method -> Framework.testMethod(method, fn)
         );
     }
@@ -883,6 +936,26 @@ public class Framework
 
     static private String FQCN(String pkg, String className) {
         return String.format("%s.%s", pkg, className);
+    }
+
+
+    static private Class<?>[] parameterSignature(Object... parameterValues) {
+        return Arrays.stream(parameterValues).map(Framework::unwrapPrimitive).toArray(Class<?>[]::new);
+    }
+
+    static private Class<?> unwrapPrimitive(Object object) {
+        var classObject = object.getClass();
+
+        if (classObject.equals(Boolean.class)) return boolean.class;
+        else if (classObject.equals(Integer.class)) return int.class;
+        else if (classObject.equals(Character.class)) return char.class;
+        else if (classObject.equals(Byte.class)) return byte.class;
+        else if (classObject.equals(Short.class)) return short.class;
+        else if (classObject.equals(Long.class)) return long.class;
+        else if (classObject.equals(Float.class)) return float.class;
+        else if (classObject.equals(Double.class)) return double.class;
+
+        return classObject;
     }
 
 
